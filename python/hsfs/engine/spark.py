@@ -21,7 +21,6 @@ import os
 import re
 import shutil
 import warnings
-from datetime import datetime, timezone
 from typing import Optional, TypeVar
 
 import avro
@@ -1054,7 +1053,7 @@ class Engine:
             feature_name,
             transformation_fn,
         ) in transformation_functions.items():
-            fn_registration_name = (
+            """fn_registration_name = (
                 transformation_fn.name
                 + "_"
                 + str(transformation_fn.version)
@@ -1082,31 +1081,22 @@ class Engine:
                             )
                     return result
 
-                return decorated_func
+                return decorated_func"""
 
-            self._spark_session.udf.register(
-                fn_registration_name,
-                timezone_decorator(transformation_fn.transformation_fn),
-                transformation_fn.output_type,
-            )
             transformation_fn_expressions.append(
-                "{fn_name:}({name:}) AS {name:}".format(
-                    fn_name=fn_registration_name, name=feature_name
-                )
+                transformation_fn.model_dependant_transformation
             )
             transformed_feature_names.append(feature_name)
 
-        # generate non transformation expressions
-        no_transformation_expr = [
-            "{name:} AS {name:}".format(name=col_name)
-            for col_name in dataset.columns
-            if col_name not in transformed_feature_names
-        ]
-
-        # generate entire expression and execute it
-        transformation_fn_expressions.extend(no_transformation_expr)
-        transformed_dataset = dataset.selectExpr(*transformation_fn_expressions)
-        return transformed_dataset.select(*dataset.columns)
+        return dataset.select(
+            *dataset.columns,
+            *[
+                fun(feature)
+                for fun, feature in zip(
+                    transformation_fn_expressions, transformed_feature_names
+                )
+            ],
+        )
 
     def _setup_gcp_hadoop_conf(self, storage_connector, path):
         PROPERTY_ENCRYPTION_KEY = "fs.gs.encryption.key"

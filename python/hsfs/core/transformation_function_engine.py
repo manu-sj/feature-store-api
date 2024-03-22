@@ -170,7 +170,13 @@ class TransformationFunctionEngine:
                 value_to_index=value_to_index,
             )
         else:
-            raise ValueError("Not implemented")
+            print("Updating model_dependant_transformation")
+            for stats in feature_descriptive_stats:
+                if stats.feature_name == feature_name:
+                    transformation_function_instance.update_model_dependant_transformation(
+                        statistics=stats
+                    )
+                    break
 
         return transformation_function_instance
 
@@ -178,7 +184,7 @@ class TransformationFunctionEngine:
         self, attached_transformation_fns, feature_descriptive_stats
     ):
         for ft_name in attached_transformation_fns:
-            if self.is_builtin(attached_transformation_fns[ft_name]):
+            if True:  # self.is_builtin(attached_transformation_fns[ft_name]):
                 # check if its built-in transformation function and populated with statistics arguments
                 transformation_fn = self.populate_builtin_fn_arguments(
                     ft_name,
@@ -268,7 +274,7 @@ class TransformationFunctionEngine:
             != "label_encoder"
         ]
 
-        if builtin_tffn_features or builtin_tffn_label_encoder_features:
+        if True:  # builtin_tffn_features or builtin_tffn_label_encoder_features:
             if training_dataset.splits:
                 # compute statistics before transformations are applied
                 stats = (

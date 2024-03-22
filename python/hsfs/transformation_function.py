@@ -20,6 +20,7 @@ import json
 import humps
 from hsfs import util
 from hsfs.core import transformation_function_engine
+from hsfs.core.hopsworks_udf import hopsworksUdf
 
 
 class TransformationFunction:
@@ -43,8 +44,13 @@ class TransformationFunction:
         self._featurestore_id = featurestore_id
         self._version = version
         self._name = name
-        self._transformation_fn = transformation_fn
+        if transformation_fn is not None:
+            self._transformation_fn = transformation_fn.udf_function
+            self.hops_works_udf = transformation_fn
+        else:
+            self._transformation_fn = transformation_fn
         self._source_code_content = source_code_content
+        self.model_dependant_transformation = None
 
         self._transformation_function_engine = (
             transformation_function_engine.TransformationFunctionEngine(
@@ -81,6 +87,9 @@ class TransformationFunction:
 
         self._feature_group_feature_name = None
         self._feature_group_id = None
+
+    def update_model_dependant_transformation(self, statistics):
+        self.model_dependant_transformation = self.hops_works_udf(statistics=statistics)
 
     def save(self):
         """Persist transformation function in backend.
@@ -197,10 +206,13 @@ class TransformationFunction:
         transformer_code = source_code_content["transformer_code"]
         self._transformer_code = module_imports + "\n" * 2 + transformer_code
 
-        scope = __import__("__main__").__dict__
-        exec(self._transformer_code, scope)
-        self._transformation_fn = eval(self._name, scope)
-        self._transformation_fn._code = self._transformer_code
+        self.hops_works_udf = hopsworksUdf(
+            func=self._transformer_code, name=self._name, module_imports=module_imports
+        )
+        # scope = __import__("__main__").__dict__
+        # exec(self._transformer_code, scope)
+        # self._transformation_fn = eval(self._name, scope)
+        # self._transformation_fn._code = self._transformer_code
 
     @classmethod
     def from_response_json(cls, json_dict):
