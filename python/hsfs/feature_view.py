@@ -3413,6 +3413,12 @@ class FeatureView:
             description=json_decamelized.get("description", None),
             featurestore_name=json_decamelized.get("featurestore_name", None),
             serving_keys=serving_keys,
+            transformation_functions=[
+                TransformationFunction.from_response_json(transformation)
+                for transformation in json_decamelized.get(
+                    "transformation_functions", []
+                )
+            ],
         )
         features = json_decamelized.get("features", [])
         if features:
@@ -3445,6 +3451,7 @@ class FeatureView:
             "labels",
             "inference_helper_columns",
             "training_helper_columns",
+            "transformation_functions",
             "schema",
             "serving_keys",
         ]:
@@ -3484,6 +3491,7 @@ class FeatureView:
             "description": self._description,
             "query": self._query,
             "features": self._features,
+            "transformation_functions": self._transformation_functions,
             "type": "featureViewDTO",
         }
 
