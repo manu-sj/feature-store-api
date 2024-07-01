@@ -235,3 +235,11 @@ class TransformationFunction:
     def output_column_names(self) -> List[str]:
         """Output column names of transformation functions"""
         return self._hopsworks_udf._output_column_names
+
+    def __repr__(self):
+        if self.hopsworks_udf._udf_type == UDFType.MODEL_DEPENDENT:
+            return (
+                f"Model-Dependent Transformation Function : {repr(self.hopsworks_udf)}"
+            )
+        else:
+            return f"On-Demand Transformation Function : {repr(self.hopsworks_udf)}"

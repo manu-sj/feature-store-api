@@ -494,6 +494,7 @@ class FeatureView:
         allow_missing: bool = False,
         force_rest_client: bool = False,
         force_sql_client: bool = False,
+        request_parameters: Optional[Dict[str, Any]] = None,
     ) -> Union[List[Any], pd.DataFrame, np.ndarray, pl.DataFrame]:
         """Returns assembled feature vector from online feature store.
             Call [`feature_view.init_serving`](#init_serving) before this method if the following configurations are needed.
@@ -567,6 +568,7 @@ class FeatureView:
             force_sql_client: boolean, defaults to False. If set to True, reads from online feature store
                 using the SQL client if initialised.
             allow_missing: Setting to `True` returns feature vectors with missing values.
+            request_parameters: Request parameters required by on-demand transformation functions.
 
         # Returns
             `list`, `pd.DataFrame`, `polars.DataFrame` or `np.ndarray` if `return type` is set to `"list"`, `"pandas"`, `"polars"` or `"numpy"`
@@ -592,6 +594,7 @@ class FeatureView:
             vector_db_features=vector_db_features,
             force_rest_client=force_rest_client,
             force_sql_client=force_sql_client,
+            request_parameters=request_parameters,
         )
 
     def get_feature_vectors(
@@ -603,6 +606,7 @@ class FeatureView:
         allow_missing: bool = False,
         force_rest_client: bool = False,
         force_sql_client: bool = False,
+        request_parameters: Optional[List[Dict[str, Any]]] = None,
     ) -> Union[List[List[Any]], pd.DataFrame, np.ndarray, pl.DataFrame]:
         """Returns assembled feature vectors in batches from online feature store.
             Call [`feature_view.init_serving`](#init_serving) before this method if the following configurations are needed.
@@ -701,6 +705,7 @@ class FeatureView:
             vector_db_features=vector_db_features,
             force_rest_client=force_rest_client,
             force_sql_client=force_sql_client,
+            request_parameters=request_parameters,
         )
 
     def get_inference_helper(
@@ -1026,7 +1031,7 @@ class FeatureView:
             start_time,
             end_time,
             self._batch_scoring_server.training_dataset_version,
-            self._batch_scoring_server._transformation_functions,
+            self._batch_scoring_server._model_dependent_transformation_functions,
             read_options,
             spine,
             primary_keys,

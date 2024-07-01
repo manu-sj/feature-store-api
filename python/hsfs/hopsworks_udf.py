@@ -137,9 +137,14 @@ class HopsworksUdf:
         name: Optional[str] = None,
         transformation_features: Optional[List[TransformationFeature]] = None,
         dropped_features: Optional[List[str]] = None,
+        feature_name_prefix: Optional[str] = None,
     ):
         self._return_types: List[str] = HopsworksUdf._validate_and_convert_output_types(
             return_types
+        )
+
+        self._feature_name_prefix: Optional[str] = (
+            feature_name_prefix  # Prefix to be added to feature names
         )
 
         self._function_name: str = func.__name__ if name is None else name
@@ -164,7 +169,7 @@ class HopsworksUdf:
 
         self._dropped_features: List[str] = (
             HopsworksUdf._validate_and_convert_drop_features(
-                dropped_features, self.transformation_features
+                dropped_features, self.transformation_features, feature_name_prefix
             )
         )
 
@@ -176,7 +181,9 @@ class HopsworksUdf:
 
     @staticmethod
     def _validate_and_convert_drop_features(
-        dropped_features: Union[str, List[str]], transformation_feature: List[str]
+        dropped_features: Union[str, List[str]],
+        transformation_feature: List[str],
+        feature_name_prefix: str,
     ) -> List[str]:
         """
         Function that converts dropped features to a list and validates if the dropped feature is present in the transformation function
@@ -195,9 +202,11 @@ class HopsworksUdf:
             else dropped_features
         )
 
+        feature_name_prefix = feature_name_prefix if feature_name_prefix else ""
+
         missing_drop_features = []
         for dropped_feature in dropped_features:
-            if dropped_feature not in transformation_feature:
+            if feature_name_prefix + dropped_feature not in transformation_feature:
                 missing_drop_features.append(dropped_feature)
 
         if missing_drop_features:
@@ -611,6 +620,7 @@ def renaming_wrapper(*args):
             if self.statistics_required
             else None,
             "name": self._function_name,
+            "featureNamePrefix": self._feature_name_prefix,
         }
 
     def json(self) -> str:
@@ -638,6 +648,7 @@ def renaming_wrapper(*args):
         json_decamelized = humps.decamelize(json_dict)
         function_source_code = json_decamelized["source_code"]
         function_name = json_decamelized["name"]
+        feature_name_prefix = json_decamelized.get("feature_name_prefix", None)
         output_types = [
             output_type.strip()
             for output_type in json_decamelized["output_types"].split(",")
@@ -684,6 +695,7 @@ def renaming_wrapper(*args):
             name=function_name,
             transformation_features=transformation_features,
             dropped_features=dropped_features if "" not in dropped_features else None,
+            feature_name_prefix=feature_name_prefix,
         )
 
         # Set transformation features if already set.
@@ -732,17 +744,30 @@ def renaming_wrapper(*args):
     @property
     def output_column_names(self) -> List[str]:
         """Output columns names of the transformation function"""
-        return self._output_column_names
+        if self._feature_name_prefix:
+            return [
+                self._feature_name_prefix + output_col_name
+                for output_col_name in self._output_column_names
+            ]
+        else:
+            return self._output_column_names
 
     @property
     def transformation_features(self) -> List[str]:
         """
         List of feature names to be used in the User Defined Function.
         """
-        return [
-            transformation_feature.feature_name
-            for transformation_feature in self._transformation_features
-        ]
+        if self._feature_name_prefix:
+            return [
+                self._feature_name_prefix + transformation_feature.feature_name
+                for transformation_feature in self._transformation_features
+            ]
+
+        else:
+            return [
+                transformation_feature.feature_name
+                for transformation_feature in self._transformation_features
+            ]
 
     @property
     def statistics_features(self) -> List[str]:
@@ -789,12 +814,18 @@ def renaming_wrapper(*args):
 
     @property
     def dropped_features(self) -> List[str]:
-        return self._dropped_features
+        if self._feature_name_prefix:
+            return [
+                self._feature_name_prefix + dropped_feature
+                for dropped_feature in self._dropped_features
+            ]
+        else:
+            return self._dropped_features
 
     @dropped_features.setter
     def dropped_features(self, features: List[str]) -> None:
         self._dropped_features = HopsworksUdf._validate_and_convert_drop_features(
-            features, self.transformation_features
+            features, self.transformation_features, self._feature_name_prefix
         )
 
     @transformation_statistics.setter
@@ -818,3 +849,6 @@ def renaming_wrapper(*args):
             )
         else:
             self._output_column_names = output_col_names
+
+    def __repr__(self):
+        return f'{self.function_name}({", ".join(self.transformation_features)})'
